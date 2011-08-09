@@ -1,0 +1,6 @@
+TODO:
+
+- add tracking number support
+- allow adding an offset
+- notify staff which tickets are needed
+- convert prices to XML (or other file format) so they can be swapped out easily
