@@ -6,19 +6,19 @@
  */
 
 class FastwayNZShippingModifier extends OrderModifier{
-	
+
 	static $db = array(
 		'Region' => 'Varchar',
 		'Rural' => 'Boolean'
 	);
-	
+
 	//prices last updated 30 Nov 2010
-	
+
 	static $ruralfee = 3.85;
-	
+
 	static $standard = array(
 		'local' => array(
-			'price' => 3.25, 
+			'price' => 3.25,
 			'maxweight' => 25
 		),
 		'shorthaul' => array(
@@ -30,7 +30,7 @@ class FastwayNZShippingModifier extends OrderModifier{
 			'maxweight' => 10,
 			'excess' => array(
 				'price' => 4.85,
-				'weight' => 5  
+				'weight' => 5
 			)
 		),
 		'betweenislands5kg' => array(
@@ -50,10 +50,10 @@ class FastwayNZShippingModifier extends OrderModifier{
 			'maxweight' => 2
 		)
 	);
-	
+
 	static $frequent = array(
 		'local' => array(
-			'price' => 2.20, 
+			'price' => 2.20,
 			'maxweight' => 25
 		),
 		'shorthaul' => array(
@@ -65,7 +65,7 @@ class FastwayNZShippingModifier extends OrderModifier{
 			'maxweight' => 10,
 			'excess' => array(
 				'price' => 3.85,
-				'weight' => 5  
+				'weight' => 5
 			)
 		),
 		'betweenislands5kg' => array(
@@ -85,7 +85,7 @@ class FastwayNZShippingModifier extends OrderModifier{
 			'maxweight' => 2
 		)
 	);
-	
+
 	static $regionoptions = array(
 		"Northland" => array('smallparcelsnationwide','withinisland'),
 		"Auckland" => array('smallparcelsnationwide','withinisland'),
@@ -105,16 +105,17 @@ class FastwayNZShippingModifier extends OrderModifier{
 		"Southland" => array('smallparcelsnationwide','betweenislands5kg','betweenislands10kg'),
 		"default" => array('smallparcelsnationwide','betweenislands5kg','betweenislands10kg')
 	);
-	
-	
-	function TableTitle(){
+
+
+	function TableTitle(){return $this->getTableTitle();}
+	function getTableTitle(){
 		$toregion = (isset(self::$regionoptions[$this->Region])) ? " to ".$this->Region : "";
 		if($this->Rural) $toregion .=" - Rural";
 		$toregion .= " (weight = ".$this->TotalWeight()."kg)";
 		return 'Shipping'.$toregion;
 	}
-	
-	
+
+
 	function TotalWeight(){
 		$totalweight = 0;
 		if($orderItems = $this->Order()->Items()) {
@@ -124,33 +125,33 @@ class FastwayNZShippingModifier extends OrderModifier{
 		}
 		return $totalweight;
 	}
-	
+
 	function Amount() {
-		
+
 		$totalweight = $this->TotalWeight();
-		
+
 		$cost = 0;
-		
+
 		$plans = self::$standard; //make this configurable
-				
+
 		if($totalweight <= 0) return 0;
-		
+
 		$regionoptions = self::$regionoptions;
 		$region = 'default';
 		$regionoption = null;
 		if(isset($regionoptions[$this->Region])) $region = $this->Region;
-		
-		
+
+
 		if(isset($regionoptions[$region])){
 			$regionoption = $regionoptions[$region];
 		}elseif(isset($regionoptions['default'])){
-			$regionoption = $regionoptions['default'];	
+			$regionoption = $regionoptions['default'];
 		}
-		
+
 		foreach($regionoption as $option){
-			
+
 			if(isset($plans[$option]) && isset($plans[$option]['maxweight']) && isset($plans[$option]['price'])){
-				
+
 				if($totalweight <= $plans[$option]['maxweight']){
 					if($cost <= 0 || $plans[$option]['price'] < $cost)
 						$cost = $plans[$option]['price'];
@@ -158,27 +159,27 @@ class FastwayNZShippingModifier extends OrderModifier{
 					&& is_array($plans[$option]['excess'])
 					&& isset($plans[$option]['excess']['price'])
 					&& isset($plans[$option]['excess']['weight'])){
-					
+
 						$tempweight =  $plans[$option]['maxweight'];
 						$tempcost = $plans[$option]['price'];
 						while($tempweight < $totalweight){ //TODO: this can probably be done smarter with modulus or something
 							$tempweight += $plans[$option]['excess']['weight'];
 							$tempcost += $plans[$option]['excess']['price'];
 						}
-						
+
 						if($cost <= 0 || $tempcost < $cost)
 							$cost = $tempcost;
-					
+
 				}
 			}
 		}
-		
+
 		if($this->Rural)
 			$cost += self::$ruralfee;
-		
+
 		return $cost;
 	}
-	
+
 		//TODO: go into OrderModifier
 	function Form(){
 		$class = $this->class.'_Controller';
@@ -188,31 +189,31 @@ class FastwayNZShippingModifier extends OrderModifier{
 		$form->Fields()->fieldByName('OrderModifierID')->setValue($this->ID);
 		return $form;
 	}
-	
-	
+
+
 }
 
 class FastwayNZShippingModifier_Controller extends Controller{
 
-	//TODO: go into OrderModifier_Controller	
+	//TODO: go into OrderModifier_Controller
 	function modifier(){
-		
-		if(isset($_REQUEST['OrderModifierID']) 
+
+		if(isset($_REQUEST['OrderModifierID'])
 			&& is_numeric($_REQUEST['OrderModifierID'])
 			&& $modifier = DataObject::get_by_id('OrderModifier',$_REQUEST['OrderModifierID'])){  //TODO: use proper api
 				//TODO: don't allow modification of any modifier
 			return $modifier;
 		}
 		return false;
-	}	
+	}
 
-	//TODO: go into OrderModifier_Controller	
+	//TODO: go into OrderModifier_Controller
 	function Link(){
 		return $this->class;
 	}
-	
+
 	function Form(){
-		
+
 		$regions = FastwayNZShippingModifier::$regionoptions;
 		foreach($regions as $key => $values){
 			$regions[$key] = $key;
@@ -225,16 +226,16 @@ class FastwayNZShippingModifier_Controller extends Controller{
 				new CheckboxField('Rural','Rural'),
 				$hf = new HiddenField('OrderModifierID')
 			),
-			
+
 			new FieldSet(new FormAction('updatemodifier','update region'))
 		);
-		
+
 		return $form;
 	}
-	
+
 	//TODO: go into OrderModifier_Controller
 	function updatemodifier($data,$form){
-		
+
 		if($modifier = $this->modifier()){
 			$form->saveInto($modifier);
 			$modifier->write();
@@ -243,9 +244,9 @@ class FastwayNZShippingModifier_Controller extends Controller{
 		if(!$this->isAjax()) //TODO: use nicer status updates
 			Director::redirectBack();
 	}
-	
-	
-	
+
+
+
 }
 
 ?>
