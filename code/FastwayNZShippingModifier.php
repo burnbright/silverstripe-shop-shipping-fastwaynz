@@ -115,6 +115,17 @@ class FastwayNZShippingModifier extends OrderModifier{
 		return 'Shipping'.$toregion;
 	}
 
+	function getCMSFields(){
+		$fields = parent::getCMSFields();
+		$keys = array_keys($this->regionoptions);
+		$newArray = array();
+		foreach($keys as $key) {
+			$newArray[$key] = $key;
+		}
+		$fields->replaceField("Region", new DropdownField("Region", "Region", $newArray));
+		return $fields;
+	}
+
 
 	function TotalWeight(){
 		$totalweight = 0;
