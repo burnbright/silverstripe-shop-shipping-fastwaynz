@@ -1,10 +1,8 @@
 <?php
-
 /**
  * Works out the cheapest shipping based on the total order weight and the NZ Fastway rates
  * http://www.fastway.co.nz/6Prices.html
  */
-
 class FastwayNZShippingModifier extends OrderModifier{
 
 	static $db = array(
@@ -13,7 +11,6 @@ class FastwayNZShippingModifier extends OrderModifier{
 	);
 
 	//prices last updated 30 Nov 2010
-
 	static $ruralfee = 3.85;
 
 	static $standard = array(
@@ -126,7 +123,6 @@ class FastwayNZShippingModifier extends OrderModifier{
 		return $fields;
 	}
 
-
 	function TotalWeight(){
 		$totalweight = 0;
 		if($orderItems = $this->Order()->Items()) {
@@ -137,57 +133,45 @@ class FastwayNZShippingModifier extends OrderModifier{
 		return $totalweight;
 	}
 
-	function Amount() {
-
+	function value($incoming) {
 		$totalweight = $this->TotalWeight();
-
 		$cost = 0;
-
 		$plans = self::$standard; //make this configurable
-
-		if($totalweight <= 0) return 0;
-
+		if($totalweight <= 0){
+			return 0;
+		}
 		$regionoptions = self::$regionoptions;
 		$region = 'default';
 		$regionoption = null;
-		if(isset($regionoptions[$this->Region])) $region = $this->Region;
-
-
+		if(isset($regionoptions[$this->Region])){
+			$region = $this->Region;
+		}
 		if(isset($regionoptions[$region])){
 			$regionoption = $regionoptions[$region];
 		}elseif(isset($regionoptions['default'])){
 			$regionoption = $regionoptions['default'];
 		}
-
 		foreach($regionoption as $option){
-
 			if(isset($plans[$option]) && isset($plans[$option]['maxweight']) && isset($plans[$option]['price'])){
-
 				if($totalweight <= $plans[$option]['maxweight']){
 					if($cost <= 0 || $plans[$option]['price'] < $cost)
 						$cost = $plans[$option]['price'];
-				}elseif(isset($plans[$option]['excess'])
-					&& is_array($plans[$option]['excess'])
-					&& isset($plans[$option]['excess']['price'])
-					&& isset($plans[$option]['excess']['weight'])){
-
-						$tempweight =  $plans[$option]['maxweight'];
-						$tempcost = $plans[$option]['price'];
-						while($tempweight < $totalweight){ //TODO: this can probably be done smarter with modulus or something
-							$tempweight += $plans[$option]['excess']['weight'];
-							$tempcost += $plans[$option]['excess']['price'];
-						}
-
-						if($cost <= 0 || $tempcost < $cost)
-							$cost = $tempcost;
-
+				}elseif(isset($plans[$option]['excess']) && is_array($plans[$option]['excess']) && isset($plans[$option]['excess']['price']) && isset($plans[$option]['excess']['weight'])){
+					$tempweight =  $plans[$option]['maxweight'];
+					$tempcost = $plans[$option]['price'];
+					while($tempweight < $totalweight){ //TODO: this can probably be done smarter with modulus or something
+						$tempweight += $plans[$option]['excess']['weight'];
+						$tempcost += $plans[$option]['excess']['price'];
+					}
+					if($cost <= 0 || $tempcost < $cost){
+						$cost = $tempcost;
+					}
 				}
 			}
 		}
-
-		if($this->Rural)
+		if($this->Rural){
 			$cost += self::$ruralfee;
-
+		}
 		return $cost;
 	}
 
@@ -201,14 +185,12 @@ class FastwayNZShippingModifier extends OrderModifier{
 		return $form;
 	}
 
-
 }
 
 class FastwayNZShippingModifier_Controller extends Controller{
 
 	//TODO: go into OrderModifier_Controller
 	function modifier(){
-
 		if(isset($_REQUEST['OrderModifierID'])
 			&& is_numeric($_REQUEST['OrderModifierID'])
 			&& $modifier = DataObject::get_by_id('OrderModifier',$_REQUEST['OrderModifierID'])){  //TODO: use proper api
@@ -224,12 +206,10 @@ class FastwayNZShippingModifier_Controller extends Controller{
 	}
 
 	function Form(){
-
 		$regions = FastwayNZShippingModifier::$regionoptions;
 		foreach($regions as $key => $values){
 			$regions[$key] = $key;
 		}
-
 		$form = new Form(
 			$this,'Form',
 			new FieldSet(
@@ -240,24 +220,17 @@ class FastwayNZShippingModifier_Controller extends Controller{
 
 			new FieldSet(new FormAction('updatemodifier','update region'))
 		);
-
 		return $form;
 	}
 
 	//TODO: go into OrderModifier_Controller
 	function updatemodifier($data,$form){
-
 		if($modifier = $this->modifier()){
 			$form->saveInto($modifier);
 			$modifier->write();
 		}
-
 		if(!$this->isAjax()) //TODO: use nicer status updates
 			Director::redirectBack();
 	}
 
-
-
 }
-
-?>
